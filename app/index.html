@@ -4,8 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+        .hidden { display: none; }
+        label { display: block; margin: 0.6rem 0; }
+        input[type="email"], input[type="password"] { width: 100%; padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
+        button { margin: 0.3rem 0.3rem 0.3rem 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+        .check-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0; border-bottom: 1px solid #ddd; }
+        .check-row input { width: auto; }
+        #msg { margin: 0.6rem 0; font-size: 0.9rem; color: #b00020; }
+        h2 { margin-bottom: 0.4rem; }
+    </style>
 </head>
 <body>
+    <div id="auth">
+        <h2>Вход</h2>
+        <label>Email <input type="email" id="email" autocomplete="email"></label>
+        <label>Пароль <input type="password" id="password" autocomplete="current-password"></label>
+        <div>
+            <button id="btn-login">Войти</button>
+            <button id="btn-register">Зарегистрироваться</button>
+        </div>
+        <div id="msg"></div>
+    </div>
+
+    <!-- Активности РСЧС (виден после входа) -->
+    <div id="app" class="hidden">
+        <h2>Активности РСЧС</h2>
+        <div class="check-row">
+            <input type="checkbox" id="rocket-danger">
+            <label for="rocket-danger" style="margin:0">Ракетная опасность</label>
+        </div>
+        <div class="check-row">
+            <input type="checkbox" id="bpla-danger">
+            <label for="bpla-danger" style="margin:0">Опасность БПЛА</label>
+        </div>
+        <div id="status" style="font-size:0.85rem;color:#555;margin-top:0.4rem"></div>
+        <button id="btn-logout" style="margin-top:1rem">Выйти</button>
+    </div>
     <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
@@ -28,6 +64,96 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const el = {
+            auth: document.getElementById("auth"),
+            app: document.getElementById("app"),
+            email: document.getElementById("email"),
+            password: document.getElementById("password"),
+            msg: document.getElementById("msg"),
+            rocket: document.getElementById("rocket-danger"),
+            bpla: document.getElementById("bpla-danger"),
+            status: document.getElementById("status"),
+            btnLogin: document.getElementById("btn-login"),
+            btnRegister: document.getElementById("btn-register"),
+            btnLogout: document.getElementById("btn-logout")
+        };
+
+        function showMsg(text) { el.msg.textContent = text; }
+
+        // Загрузить сохранённые активности текущего пользователя
+        async function loadChecks(uid) {
+            el.status.textContent = "Загрузка…";
+            try {
+                const snap = await getDoc(doc(db, "users", uid));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    el.rocket.checked = !!data.rocketDanger;
+                    el.bpla.checked = !!data.bplaDanger;
+                }
+                el.status.textContent = "";
+            } catch (e) {
+                el.status.textContent = "Не удалось загрузить: " + e.message;
+            }
+        }
+
+        // Сохранить одно поле чекбокса в Firestore (merge — не затирает остальные поля)
+        async function saveCheck(field, checked, uid) {
+            el.status.textContent = "Сохранение…";
+            try {
+                await setDoc(doc(db, "users", uid), { [field]: checked }, { merge: true });
+                el.status.textContent = "Сохранено";
+            } catch (e) {
+                el.status.textContent = "Ошибка сохранения: " + e.message;
+            }
+        }
+
+        const onUser = async (user) => {
+            if (user) {
+                el.auth.classList.add("hidden");
+                el.app.classList.remove("hidden");
+                await loadChecks(user.uid);
+            } else {
+                el.app.classList.add("hidden");
+                el.auth.classList.remove("hidden");
+                el.rocket.checked = false;
+                el.bpla.checked = false;
+                el.status.textContent = "";
+            }
+        };
+
+        onAuthStateChanged(auth, onUser);
+
+        el.btnLogin.addEventListener("click", async () => {
+            showMsg("");
+            try {
+                await signInWithEmailAndPassword(auth, el.email.value.trim(), el.password.value);
+            } catch (e) { showMsg("Ошибка входа: " + e.message); }
+        });
+
+        el.btnRegister.addEventListener("click", async () => {
+            showMsg("");
+            try {
+                await createUserWithEmailAndPassword(auth, el.email.value.trim(), el.password.value);
+            } catch (e) { showMsg("Ошибка регистрации: " + e.message); }
+        });
+
+        el.btnLogout.addEventListener("click", async () => {
+            try { await signOut(auth); } catch (e) { showMsg("Ошибка выхода: " + e.message); }
+        });
+
+        // События чекбоксов: сохраняем по uid текущего пользователя
+        el.rocket.addEventListener("change", () => {
+            const user = auth.currentUser;
+            if (user) saveCheck("rocketDanger", el.rocket.checked, user.uid);
+        });
+        el.bpla.addEventListener("change", () => {
+            const user = auth.currentUser;
+            if (user) saveCheck("bplaDanger", el.bpla.checked, user.uid);
+        });
+
 </script>
 </body>
 </html>
