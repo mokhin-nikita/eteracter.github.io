@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Активности РСЧС</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
         .hidden { display: none; }
@@ -12,6 +12,7 @@
         button { margin: 0.3rem 0.3rem 0.3rem 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
         .check-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0; border-bottom: 1px solid #ddd; }
         .check-row input { width: auto; }
+        .check-row label { margin: 0; }
         #msg { margin: 0.6rem 0; font-size: 0.9rem; color: #b00020; }
         h2 { margin-bottom: 0.4rem; }
     </style>
@@ -24,52 +25,45 @@
         <div>
             <button id="btn-login">Войти</button>
             <button id="btn-register">Зарегистрироваться</button>
-			<button id="btn-google">Войти через Google</button>
         </div>
+        <button id="btn-google" style="margin-top:0.6rem">Войти через Google</button>
         <div id="msg"></div>
     </div>
 
-    <!-- Активности РСЧС (виден после входа) -->
     <div id="app" class="hidden">
         <h2>Активности РСЧС</h2>
         <div class="check-row">
             <input type="checkbox" id="rocket-danger">
-            <label for="rocket-danger" style="margin:0">Ракетная опасность</label>
+            <label for="rocket-danger">Ракетная опасность</label>
         </div>
         <div class="check-row">
             <input type="checkbox" id="bpla-danger">
-            <label for="bpla-danger" style="margin:0">Опасность БПЛА</label>
+            <label for="bpla-danger">Опасность БПЛА</label>
         </div>
         <div id="status" style="font-size:0.85rem;color:#555;margin-top:0.4rem"></div>
         <button id="btn-logout" style="margin-top:1rem">Выйти</button>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-auth-compat.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore-compat.js"></script>
     <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBWAwVnqGgj-MlbjMBWYiQTyP9EJC3z-J0",
+            authDomain: "eteractercheck.firebaseapp.com",
+            projectId: "eteractercheck",
+            storageBucket: "eteractercheck.firebasestorage.app",
+            messagingSenderId: "610952010672",
+            appId: "1:610952010672:web:e812caf379d91f6a4b5475",
+            measurementId: "G-58WXDPYKK2"
+        };
 
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+        firebase.initializeApp(firebaseConfig);
+        var auth = firebase.auth();
+        var db = firebase.firestore();
+        var googleProvider = new firebase.auth.GoogleAuthProvider();
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyBWAwVnqGgj-MlbjMBWYiQTyP9EJC3z-J0",
-    authDomain: "eteractercheck.firebaseapp.com",
-    projectId: "eteractercheck",
-    storageBucket: "eteractercheck.firebasestorage.app",
-    messagingSenderId: "610952010672",
-    appId: "1:610952010672:web:e812caf379d91f6a4b5475",
-    measurementId: "G-58WXDPYKK2"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-		var googleProvider = new firebase.auth.GoogleAuthProvider();
-        const el = {
+        var el = {
             auth: document.getElementById("auth"),
             app: document.getElementById("app"),
             email: document.getElementById("email"),
@@ -80,19 +74,18 @@
             status: document.getElementById("status"),
             btnLogin: document.getElementById("btn-login"),
             btnRegister: document.getElementById("btn-register"),
-            btnLogout: document.getElementById("btn-logout"),
-			btnGoogle: document.getElementById("btn-google");
+            btnGoogle: document.getElementById("btn-google"),
+            btnLogout: document.getElementById("btn-logout")
         };
 
         function showMsg(text) { el.msg.textContent = text; }
 
-        // Загрузить сохранённые активности текущего пользователя
         async function loadChecks(uid) {
             el.status.textContent = "Загрузка…";
             try {
-                const snap = await getDoc(doc(db, "users", uid));
-                if (snap.exists()) {
-                    const data = snap.data();
+                var snap = await db.collection("users").doc(uid).get();
+                if (snap.exists) {
+                    var data = snap.data();
                     el.rocket.checked = !!data.rocketDanger;
                     el.bpla.checked = !!data.bplaDanger;
                 }
@@ -102,22 +95,21 @@
             }
         }
 
-        // Сохранить одно поле чекбокса в Firestore (merge — не затирает остальные поля)
         async function saveCheck(field, checked, uid) {
             el.status.textContent = "Сохранение…";
             try {
-                await setDoc(doc(db, "users", uid), { [field]: checked }, { merge: true });
+                await db.collection("users").doc(uid).set({ [field]: checked }, { merge: true });
                 el.status.textContent = "Сохранено";
             } catch (e) {
                 el.status.textContent = "Ошибка сохранения: " + e.message;
             }
         }
 
-        const onUser = async (user) => {
+        function onUser(user) {
             if (user) {
                 el.auth.classList.add("hidden");
                 el.app.classList.remove("hidden");
-                await loadChecks(user.uid);
+                loadChecks(user.uid);
             } else {
                 el.app.classList.add("hidden");
                 el.auth.classList.remove("hidden");
@@ -125,44 +117,37 @@
                 el.bpla.checked = false;
                 el.status.textContent = "";
             }
-        };
+        }
+        auth.onAuthStateChanged(onUser);
 
-        onAuthStateChanged(auth, onUser);
-
-        el.btnLogin.addEventListener("click", async () => {
+        el.btnLogin.addEventListener("click", function () {
             showMsg("");
-            try {
-                await signInWithEmailAndPassword(auth, el.email.value.trim(), el.password.value);
-            } catch (e) { showMsg("Ошибка входа: " + e.message); }
+            auth.signInWithEmailAndPassword(el.email.value.trim(), el.password.value)
+                .catch(function (e) { showMsg("Ошибка входа: " + e.message); });
         });
 
-        el.btnRegister.addEventListener("click", async () => {
+        el.btnRegister.addEventListener("click", function () {
             showMsg("");
-            try {
-                await createUserWithEmailAndPassword(auth, el.email.value.trim(), el.password.value);
-            } catch (e) { showMsg("Ошибка регистрации: " + e.message); }
+            auth.createUserWithEmailAndPassword(el.email.value.trim(), el.password.value)
+                .catch(function (e) { showMsg("Ошибка регистрации: " + e.message); });
         });
 
-        el.btnLogout.addEventListener("click", async () => {
-            try { await signOut(auth); } catch (e) { showMsg("Ошибка выхода: " + e.message); }
+        el.btnGoogle.addEventListener("click", function () {
+            showMsg("");
+            auth.signInWithPopup(googleProvider)
+                .catch(function (e) { showMsg("Вход через Google: " + e.message); });
         });
 
-        // События чекбоксов: сохраняем по uid текущего пользователя
-        el.rocket.addEventListener("change", () => {
-            const user = auth.currentUser;
-            if (user) saveCheck("rocketDanger", el.rocket.checked, user.uid);
+        el.btnLogout.addEventListener("click", function () {
+            auth.signOut().catch(function (e) { showMsg("Ошибка выхода: " + e.message); });
         });
-        el.bpla.addEventListener("change", () => {
-            const user = auth.currentUser;
-            if (user) saveCheck("bplaDanger", el.bpla.checked, user.uid);
-        });
-		el.btnGoogle.addEventListener("click", () => {
-			showMsg("");
-			auth.signInWithPopup(googleProvider).catch((e) => {
-				showMsg(`Вход через Google: ${e.message}`);
-			})
-		});
 
-</script>
+        el.rocket.addEventListener("change", function () {
+            if (auth.currentUser) saveCheck("rocketDanger", el.rocket.checked, auth.currentUser.uid);
+        });
+        el.bpla.addEventListener("change", function () {
+            if (auth.currentUser) saveCheck("bplaDanger", el.bpla.checked, auth.currentUser.uid);
+        });
+    </script>
 </body>
 </html>
