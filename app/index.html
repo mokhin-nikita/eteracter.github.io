@@ -24,6 +24,7 @@
         <div>
             <button id="btn-login">Войти</button>
             <button id="btn-register">Зарегистрироваться</button>
+			<button id="btn-google">Войти через Google</button>
         </div>
         <div id="msg"></div>
     </div>
@@ -67,7 +68,7 @@
   const analytics = getAnalytics(app);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
+		var googleProvider = new firebase.auth.GoogleAuthProvider();
         const el = {
             auth: document.getElementById("auth"),
             app: document.getElementById("app"),
@@ -79,7 +80,8 @@
             status: document.getElementById("status"),
             btnLogin: document.getElementById("btn-login"),
             btnRegister: document.getElementById("btn-register"),
-            btnLogout: document.getElementById("btn-logout")
+            btnLogout: document.getElementById("btn-logout"),
+			btnGoogle: document.getElementById("btn-google");
         };
 
         function showMsg(text) { el.msg.textContent = text; }
@@ -154,6 +156,12 @@
             const user = auth.currentUser;
             if (user) saveCheck("bplaDanger", el.bpla.checked, user.uid);
         });
+		el.btnGoogle.addEventListener("click", () => {
+			showMsg("");
+			auth.signInWithPopup(googleProvider).catch((e) => {
+				showMsg(`Вход через Google: ${e.message}`);
+			})
+		});
 
 </script>
 </body>
