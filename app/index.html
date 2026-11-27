@@ -9,7 +9,7 @@
         .hidden { display: none; }
         label { display: block; margin: 0.6rem 0; }
         input[type="email"], input[type="password"] { width: 100%; padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
-        button { margin: 0.3rem 0.3rem 0.3rem 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+        button { margin: 0.3rem 0.3rem 0.3rem 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; border: none; }
         .check-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0; border-bottom: 1px solid #ddd; }
         .check-row input { width: auto; }
         .check-row label { margin: 0; }
@@ -21,6 +21,14 @@
         }
         #auth {
             background-color: #eee;
+        }
+        #btn-logout {
+            background-color: #e32212;
+            color: white;
+        }
+        #btn-register, #btn-login {
+            background-color: #5a0;
+            color: white;
         }
     </style>
 </head>
